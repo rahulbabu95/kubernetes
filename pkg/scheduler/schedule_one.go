@@ -104,7 +104,7 @@ func (sched *Scheduler) scheduleOnePod(ctx context.Context, podInfo *framework.Q
 	// https://github.com/kubernetes/kubernetes/issues/111672
 	logger = klog.LoggerWithValues(logger, "pod", klog.KObj(pod))
 	ctx = klog.NewContext(ctx, logger)
-	logger.V(4).Info("About to try and schedule pod", "pod", klog.KObj(pod))
+	logger.V(2).Info("About to try and schedule pod", "pod", klog.KObj(pod))
 
 	fwk, err := sched.frameworkForPod(pod)
 	if err != nil {
@@ -297,7 +297,7 @@ func (sched *Scheduler) schedulingAlgorithm(
 		if status.Code() == fwk.Error {
 			utilruntime.HandleErrorWithContext(ctx, nil, "Status after running PostFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
 		} else {
-			logger.V(5).Info("Status after running PostFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
+			logger.V(2).Info("Status after running PostFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
 		}
 
 		var nominatingInfo *fwk.NominatingInfo
@@ -486,7 +486,7 @@ func (sched *Scheduler) bindingCycle(
 	}
 	// Count pods scheduled after being flushed from unschedulablePods
 	if assumedPodInfo.WasFlushedFromUnschedulable {
-		logger.V(4).Info("Pod scheduled after flush from unschedulablePods", "pod", klog.KObj(assumedPodInfo.Pod), "unschedulablePlugins", assumedPodInfo.UnschedulablePlugins, "pendingPlugins", assumedPodInfo.PendingPlugins)
+		logger.V(2).Info("Pod scheduled after flush from unschedulablePods", "pod", klog.KObj(assumedPodInfo.Pod), "unschedulablePlugins", assumedPodInfo.UnschedulablePlugins, "pendingPlugins", assumedPodInfo.PendingPlugins)
 		metrics.PodScheduledAfterFlush.Inc()
 	}
 	// Run "postbind" plugins.
@@ -648,7 +648,7 @@ func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, schedFramework 
 		// Record the messages from PreFilter in Diagnosis.PreFilterMsg.
 		msg := s.Message()
 		diagnosis.PreFilterMsg = msg
-		logger.V(5).Info("Status after running PreFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
+		logger.V(2).Info("Status after running PreFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
 		diagnosis.AddPluginStatus(s)
 		return nil, diagnosis, "", nil
 	}
@@ -733,7 +733,7 @@ func (sched *Scheduler) evaluateNominatedNode(ctx context.Context, pod *v1.Pod, 
 		// It's not an error if NNN is in the cluster but not in the placement.
 		// This can happen during the pod group placement scheduling cycle, where we simulate multiple potential placements.
 		logger := klog.FromContext(ctx)
-		logger.V(4).Info("Pod's nominated node is present in the cluster but not available in the current placement", "pod", klog.KObj(pod), "node", pod.Status.NominatedNodeName)
+		logger.V(2).Info("Pod's nominated node is present in the cluster but not available in the current placement", "pod", klog.KObj(pod), "node", pod.Status.NominatedNodeName)
 		return nil, nil
 	}
 	node := []fwk.NodeInfo{nodeInfo}
@@ -975,14 +975,14 @@ func prioritizeNodes(
 	}
 
 	// Additional details logged at level 10 if enabled.
-	loggerVTen := logger.V(10)
-	if loggerVTen.Enabled() {
-		for _, nodeScore := range nodesScores {
-			for _, pluginScore := range nodeScore.Scores {
-				loggerVTen.Info("Plugin scored node for pod", "pod", klog.KObj(pod), "plugin", pluginScore.Name, "node", nodeScore.Name, "score", pluginScore.Score)
-			}
+	// loggerVTen := logger.V(10)
+	// if loggerVTen.Enabled() {
+	for _, nodeScore := range nodesScores {
+		for _, pluginScore := range nodeScore.Scores {
+			logger.V(2).Info("Plugin scored node for pod", "pod", klog.KObj(pod), "plugin", pluginScore.Name, "node", nodeScore.Name, "score", pluginScore.Score)
 		}
 	}
+	// }
 
 	if len(extenders) != 0 && nodes != nil {
 		// allNodeExtendersScores has all extenders scores for all nodes.
@@ -1004,7 +1004,7 @@ func prioritizeNodes(
 				prioritizedList, weight, err := extenders[extIndex].Prioritize(pod, nodes)
 				if err != nil {
 					// Prioritization errors from extender can be ignored, let k8s/other extenders determine the priorities
-					logger.V(5).Info("Failed to run extender's priority function. No score given by this extender.", "error", err, "pod", klog.KObj(pod), "extender", extenders[extIndex].Name())
+					logger.V(2).Info("Failed to run extender's priority function. No score given by this extender.", "error", err, "pod", klog.KObj(pod), "extender", extenders[extIndex].Name())
 					return
 				}
 				mu.Lock()
@@ -1045,11 +1045,11 @@ func prioritizeNodes(
 		}
 	}
 
-	if loggerVTen.Enabled() {
-		for i := range nodesScores {
-			loggerVTen.Info("Calculated node's final score for pod", "pod", klog.KObj(pod), "node", nodesScores[i].Name, "score", nodesScores[i].TotalScore)
-		}
+	// if loggerVTen.Enabled() {
+	for i := range nodesScores {
+		logger.V(2).Info("Calculated node's final score for pod", "pod", klog.KObj(pod), "node", nodesScores[i].Name, "score", nodesScores[i].TotalScore)
 	}
+	// }
 	return nodesScores, nil
 }
 
